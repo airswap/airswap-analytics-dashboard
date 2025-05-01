@@ -1,119 +1,89 @@
 import { useState, useEffect } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
   ResponsiveContainer,
-  CartesianGrid 
+  CartesianGrid
 } from 'recharts';
-import { DailyData } from '@/components/revenue/types';
-import { formatUSD } from '@/lib/utils/format';
+import { DailyData } from '../revenue/types';
 
-const timeRanges = [
+const PERIODS = [
   { label: '1M', days: 30 },
   { label: '6M', days: 180 },
   { label: '1Y', days: 365 },
-  { label: '4Y', days: 1460 }
-] as const;
+  { label: '4Y', days: 1460 },
+];
 
-type TimeFrameType = typeof timeRanges[number]['label'];
+type PeriodLabel = '1M' | '6M' | '1Y' | '4Y';
+
+function aggregateVolume(dailyData: DailyData[], days: number) {
+  const now = Math.floor(Date.now() / 1000);
+  const since = now - days * 24 * 60 * 60;
+  return dailyData
+    .filter(day => day.date >= since)
+    .reduce((sum, day) => sum + parseFloat(day.volume || '0'), 0);
+}
 
 export function DailyVolume({ dailyData }: { dailyData: DailyData[] }) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrameType>('1M');
-  const [totalVolume, setTotalVolume] = useState(0);
-  const [averageDailyVolume, setAverageDailyVolume] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodLabel>('1M');
   const [chartData, setChartData] = useState<any[]>([]);
+  const periodDays = PERIODS.find(p => p.label === selectedPeriod)?.days || 30;
+  const volume = aggregateVolume(dailyData, periodDays);
 
   useEffect(() => {
     const now = Math.floor(Date.now() / 1000);
-    const selectedRange = timeRanges.find(range => range.label === selectedTimeframe)!;
-    const cutoffDate = now - (selectedRange.days * 24 * 60 * 60);
-    
+    const since = now - periodDays * 24 * 60 * 60;
     const filteredData = dailyData
-      .filter(day => day.date >= cutoffDate)
+      .filter(day => day.date >= since)
       .map(day => ({
         date: new Date(day.date * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        volume: parseFloat(day.volume || '0')
+        volume: parseFloat(day.volume || '0'),
       }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    setChartData(filteredData);
+  }, [dailyData, periodDays]);
 
-    const total = filteredData.reduce((sum, day) => sum + day.volume, 0);
-    setTotalVolume(total);
-    setAverageDailyVolume(total / filteredData.length);
-    setChartData(filteredData.reverse()); // Reverse to show oldest to newest
-  }, [dailyData, selectedTimeframe]);
+  const average = chartData.length ? chartData.reduce((sum, d) => sum + d.volume, 0) / chartData.length : 0;
 
   return (
-    <div className="bg-white rounded-lg">
-      <div className="px-4 py-3 border-b flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold">Daily Volume</h2>
-          <div className="mt-1 text-sm text-gray-500">
-            Total Volume: {formatUSD(totalVolume)}
-            <span className="mx-2">•</span>
-            Daily Average: {formatUSD(averageDailyVolume)}
-          </div>
-        </div>
-        <div className="flex space-x-2">
-          {timeRanges.map((range) => (
+    <section className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <h2 className="text-xl font-bold">AirSwap Volume</h2>
+        <div className="flex gap-2">
+          {PERIODS.map(({ label }) => (
             <button
-              key={range.label}
-              onClick={() => setSelectedTimeframe(range.label)}
-              className={`px-3 py-1 rounded ${
-                selectedTimeframe === range.label 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200'
-              }`}
+              key={label}
+              className={`px-3 py-1 rounded font-medium border transition-colors text-sm ${selectedPeriod === label ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => setSelectedPeriod(label as PeriodLabel)}
             >
-              {range.label}
+              {label}
             </button>
           ))}
         </div>
       </div>
-      <div className="p-4 h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              vertical={false}
-              stroke="#E5E7EB"
-            />
-            <XAxis 
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 12, fill: '#6B7280' }}
-              interval="preserveStart"
-            />
-            <YAxis 
-              tickFormatter={(value) => `$${value.toLocaleString()}`}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 12, fill: '#6B7280' }}
-            />
-            <Tooltip 
-              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Volume']}
-              labelFormatter={(label) => label}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #E5E7EB',
-                borderRadius: '6px',
-                padding: '8px'
-              }}
-            />
-            <Bar 
-              dataKey="volume"
-              fill="#3B82F6"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <div>
+            <div className="text-lg text-gray-500 mb-1">Total Volume</div>
+            <div className="text-3xl font-bold mb-1">${volume.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div className="text-sm text-gray-500">Daily Average: ${average.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          </div>
+          <div className="w-full md:w-2/3 h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} interval="preserveStart" />
+                <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Volume']} labelFormatter={(label) => label} contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '8px' }} />
+                <Bar dataKey="volume" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

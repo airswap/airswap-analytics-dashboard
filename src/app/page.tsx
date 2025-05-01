@@ -6,32 +6,13 @@ import { VolumeStats } from '@/components/volume/VolumeStats';
 import { DailyVolume } from '@/components/volume/DailyVolume';
 import { BiggestSwaps } from '@/components/swaps/BiggestSwaps';
 import { MarketMakers } from '@/components/market-makers/MarketMakers';
+import { TokenAnalytics } from '@/components/token-analytics/TokenAnalytics';
 import { SwapData } from '@/components/swaps/type';
 import { ServerData } from '@/components/market-makers/types';
 import { DailyData } from '@/components/revenue/types';
 import { VolumeData } from '@/components/volume/type';
 import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY } from '@/app/api/graphql/queries';
-
-
-
-async function secureRequest<T>(query: string, variables?: any): Promise<{ data: T }> {
-  const response = await fetch('/api/subgraph', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query,
-      variables,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch data');
-  }
-
-  return response.json();
-}
+import { secureRequest } from '@/lib/utils';
 
 export default function Home() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
@@ -147,6 +128,7 @@ export default function Home() {
         <DAORevenue dailyData={dailyData} />
         <DailyVolume dailyData={dailyData} />
         <MarketMakers servers={servers} />
+        <TokenAnalytics />
         {biggestSwaps && (
           <BiggestSwaps 
             swaps={biggestSwaps}

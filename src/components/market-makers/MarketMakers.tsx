@@ -11,9 +11,11 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
   };
 
   return (
-    <div className="bg-white rounded-lg">
-      <h2 className="px-4 py-3 text-xl font-bold border-b">Market Makers</h2>
-      <div className="overflow-x-auto">
+    <section className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
+      <div className="px-4 py-3 border-b">
+        <h2 className="text-xl font-bold">Market Makers</h2>
+      </div>
+      <div className="overflow-x-auto p-4">
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50">
@@ -57,6 +59,6 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }

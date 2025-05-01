@@ -74,3 +74,24 @@ export const SERVERS_QUERY = gql`
     }
   }
 `;
+
+export const TOKEN_ANALYTICS_SWAPS_QUERY = gql`
+  query GetRecentSwaps($timestamp: Int!) {
+    swapERC20S(
+      first: 1000,
+      where: { blockTimestamp_gt: $timestamp }
+      orderBy: senderAmountUSD
+      orderDirection: desc
+    ) {
+      id
+      senderToken
+      signerToken
+      senderAmountUSD
+      signerAmountUSD
+      blockTimestamp
+      transactionHash
+      from
+      to
+    }
+  }
+`;

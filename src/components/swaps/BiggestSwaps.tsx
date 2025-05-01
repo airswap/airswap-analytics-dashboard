@@ -2,38 +2,44 @@ import { SwapData } from './type';
 import { formatUSD } from '@/lib/utils/format';
 import { formatTimeAgo } from '@/lib/utils/date';
 
+const PERIODS = [
+  { label: '24h' },
+  { label: '7d' },
+  { label: '30d' },
+];
+
+type PeriodLabel = '24h' | '7d' | '30d';
+
 interface BiggestSwapsProps {
   swaps: {
     '24h': SwapData[];
     '7d': SwapData[];
     '30d': SwapData[];
   };
-  selectedTimeframe: '24h' | '7d' | '30d';
-  onTimeframeChange: (timeframe: '24h' | '7d' | '30d') => void;
+  selectedTimeframe: PeriodLabel;
+  onTimeframeChange: (timeframe: PeriodLabel) => void;
 }
 
 export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: BiggestSwapsProps) {
   const getSwapsForTimeframe = () => swaps?.[selectedTimeframe] || [];
 
   return (
-    <div className="bg-white rounded-lg">
-      <div className="px-4 py-3 border-b flex justify-between items-center">
+    <section className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
         <h2 className="text-xl font-bold">Top 10 Biggest Swaps ($50,000+)</h2>
-        <div className="flex space-x-2">
-          {(['24h', '7d', '30d'] as const).map((timeframe) => (
+        <div className="flex gap-2">
+          {PERIODS.map(({ label }) => (
             <button
-              key={timeframe}
-              onClick={() => onTimeframeChange(timeframe)}
-              className={`px-3 py-1 rounded ${
-                selectedTimeframe === timeframe ? 'bg-blue-600 text-white' : 'bg-gray-100'
-              }`}
+              key={label}
+              className={`px-3 py-1 rounded font-medium border transition-colors text-sm ${selectedTimeframe === label ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => onTimeframeChange(label as PeriodLabel)}
             >
-              {timeframe}
+              {label}
             </button>
           ))}
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto p-4">
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50">
@@ -70,6 +76,6 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
