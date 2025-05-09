@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "download-tokens": "node scripts/downloadTokenMetadata.js",
+    "update-tokens": "echo 'Updating token metadata...' && npm run download-tokens",
+    "prebuild": "npm run download-tokens"
   },
   "dependencies": {
     "@airswap/utils": "^5.0.2",

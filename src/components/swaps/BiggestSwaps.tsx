@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { SwapData } from './type';
 import { formatUSD } from '@/lib/utils/format';
 import { formatTimeAgo } from '@/lib/utils/date';
+import { BIGGEST_SWAPS_QUERY, fetchAllData } from '@/app/api/graphql/queries';
 
 const PERIODS = [
   { label: '24h' },
@@ -9,6 +11,13 @@ const PERIODS = [
 ];
 
 type PeriodLabel = '24h' | '7d' | '30d';
+
+interface TokenMeta {
+  address: string;
+  symbol: string;
+  name: string;
+  logoURI?: string;
+}
 
 interface BiggestSwapsProps {
   swaps: {
@@ -21,7 +30,60 @@ interface BiggestSwapsProps {
 }
 
 export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: BiggestSwapsProps) {
-  const getSwapsForTimeframe = () => swaps?.[selectedTimeframe] || [];
+  const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMeta>>({});
+  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
+
+  // Load token metadata from local file
+  useEffect(() => {
+    fetch('/tokenMetadata.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setTokenMetaMap(data);
+          setIsMetadataLoaded(true);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading token metadata:', err);
+        setIsMetadataLoaded(true);
+      });
+  }, []);
+
+  // Helper function to format token addresses with metadata
+  const renderToken = (address: string) => {
+    if (!address) return "Unknown";
+    
+    const lowerAddress = address.toLowerCase();
+    const meta = tokenMetaMap[lowerAddress];
+    
+    if (meta) {
+      return (
+        <span className="flex items-center gap-1">
+          {meta.logoURI ? (
+            <img src={meta.logoURI} alt={meta.symbol} className="w-4 h-4 rounded-full" />
+          ) : (
+            <span className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-500">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="8" />
+              </svg>
+            </span>
+          )}
+          <span>{meta.symbol}</span>
+        </span>
+      );
+    }
+    
+    // If token not found in metadata, show shortened address
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  const getSwapsForTimeframe = () => {
+    const timeframeSwaps = swaps?.[selectedTimeframe] || [];
+    // Sort by amount in case we got more than 10 items
+    return timeframeSwaps
+      .sort((a, b) => parseFloat(b.senderAmountUSD) - parseFloat(a.senderAmountUSD))
+      .slice(0, 10);
+  };
 
   return (
     <section className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
@@ -45,6 +107,7 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
             <tr className="bg-gray-50">
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Time</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Transaction</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Pair</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Amount (USD)</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Fee</th>
             </tr>
@@ -64,6 +127,13 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
                   >
                     {`${swap.transactionHash.slice(0, 6)}...${swap.transactionHash.slice(-4)}`}
                   </a>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {swap.senderToken && swap.signerToken ? (
+                    <span className="whitespace-nowrap flex items-center gap-1">
+                      {renderToken(swap.senderToken)} <span className="text-gray-500">→</span> {renderToken(swap.signerToken)}
+                    </span>
+                  ) : "Unknown Pair"}
                 </td>
                 <td className="px-4 py-3 text-sm text-right text-green-600">
                   {formatUSD(parseFloat(swap.senderAmountUSD))}

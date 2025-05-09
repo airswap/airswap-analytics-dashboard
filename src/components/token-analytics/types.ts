@@ -4,7 +4,7 @@ export interface Swap {
   signerToken: string;
   senderAmountUSD: string;
   signerAmountUSD: string;
-  blockTimestamp: number;
+  blockTimestamp: string;
   transactionHash: string;
   from: string;
   to: string;

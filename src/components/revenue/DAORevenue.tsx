@@ -31,13 +31,16 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodLabel>('1M');
   const [chartData, setChartData] = useState<any[]>([]);
   const periodDays = PERIODS.find(p => p.label === selectedPeriod)?.days || 30;
-  const revenue = aggregateRevenue(dailyData, periodDays);
+  const now = Math.floor(Date.now() / 1000);
+  const since = now - periodDays * 24 * 60 * 60;
+  const filtered = dailyData.filter(day => day.date >= since);
+  const revenue = filtered.reduce((sum, day) => sum + parseFloat(day.fees || '0'), 0);
+
+  // Debug logging
+  console.log(`[DAORevenue] Period: ${selectedPeriod}, Days: ${filtered.length}, Total: $${revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
 
   useEffect(() => {
-    const now = Math.floor(Date.now() / 1000);
-    const since = now - periodDays * 24 * 60 * 60;
-    const filteredData = dailyData
-      .filter(day => day.date >= since)
+    const filteredData = filtered
       .map(day => ({
         date: new Date(day.date * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         fees: parseFloat(day.fees || '0'),
